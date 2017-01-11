@@ -8,6 +8,7 @@
   <artifactId>reaktor-test</artifactId>
   <version>0.1</version>
   <name>Reaktor Testing for Java Nuklei</name>
+  <description>Reaktor Testing for Java Nuklei</description>
   <url>https://github.com/reaktivity/reaktor-test.java</url>
 
   <licenses>
