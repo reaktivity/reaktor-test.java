@@ -188,17 +188,40 @@ public final class NukleusRule implements TestRule
                     }
                 };
                 Thread caller = new Thread(runnable);
+                Throwable failure = null;
                 try
                 {
                     caller.start();
 
                     base.evaluate();
                 }
+                catch (Throwable t)
+                {
+                    failure = t;
+                }
                 finally
                 {
                     finished.set(true);
                     caller.join();
-                    assertEquals(0, errorCount.get());
+                    try
+                    {
+                        assertEquals(0, errorCount.get());
+                    }
+                    catch (Throwable t)
+                    {
+                        if (failure != null)
+                        {
+                            failure.addSuppressed(t);
+                        }
+                        else
+                        {
+                            failure = t;
+                        }
+                    }
+                    if (failure != null)
+                    {
+                        throw failure;
+                    }
                 }
             }
         };
