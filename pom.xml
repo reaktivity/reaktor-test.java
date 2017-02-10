@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.reaktivity</groupId>
   <artifactId>reaktor-test</artifactId>
-  <version>develop-SNAPSHOT</version>
+  <version>0.2</version>
   <name>Reaktor Testing for Java Nuklei</name>
   <description>Reaktor Testing for Java Nuklei</description>
   <url>https://github.com/reaktivity/reaktor-test.java</url>
