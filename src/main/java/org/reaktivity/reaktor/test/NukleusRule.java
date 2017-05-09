@@ -16,6 +16,7 @@
 package org.reaktivity.reaktor.test;
 
 import static java.lang.String.valueOf;
+import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
 import static java.util.Objects.requireNonNull;
 import static java.util.concurrent.TimeUnit.MICROSECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
@@ -29,6 +30,7 @@ import static org.reaktivity.nukleus.Configuration.STREAMS_BUFFER_CAPACITY_PROPE
 import static org.reaktivity.nukleus.Configuration.THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME;
 
 import java.io.File;
+import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
@@ -51,6 +53,7 @@ public final class NukleusRule implements TestRule
     private final Properties properties;
 
     private Configuration configuration;
+    private boolean clean;
 
     public NukleusRule(String... names)
     {
@@ -95,6 +98,13 @@ public final class NukleusRule implements TestRule
         return this;
     }
 
+    public NukleusRule clean()
+    {
+        this.clean = true;
+        return this;
+    }
+
+    @Deprecated
     public NukleusRule streams(
         String nukleus,
         String source)
@@ -143,8 +153,20 @@ public final class NukleusRule implements TestRule
             @Override
             public void evaluate() throws Throwable
             {
-                NukleusFactory factory = NukleusFactory.instantiate();
                 Configuration config = configuration();
+
+                if (clean)
+                {
+                    final Path directory = config.directory();
+                    for (int i=0; i < names.length; i++)
+                    {
+                        Files.walk(directory.resolve(names[i]), FOLLOW_LINKS)
+                             .map(Path::toFile)
+                             .forEach(File::delete);
+                    }
+                }
+
+                NukleusFactory factory = NukleusFactory.instantiate();
                 final AtomicBoolean finished = new AtomicBoolean();
                 final AtomicInteger errorCount = new AtomicInteger();
                 final IdleStrategy idler = new BackoffIdleStrategy(64, 64, NANOSECONDS.toNanos(64L), MICROSECONDS.toNanos(64L));
