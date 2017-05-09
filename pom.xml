@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.reaktivity</groupId>
   <artifactId>reaktor-test</artifactId>
-  <version>0.2</version>
+  <version>0.3</version>
   <name>Reaktor Testing for Java Nuklei</name>
   <description>Reaktor Testing for Java Nuklei</description>
   <url>https://github.com/reaktivity/reaktor-test.java</url>
@@ -74,7 +74,19 @@
           <includes>
             <include>src/**</include>
           </includes>
+          <excludes>
+            <exclude>src/conf/**</exclude>
+          </excludes>
+          <failIfUnknown>true</failIfUnknown>
         </configuration>
+        <executions>
+          <execution>
+            <phase>validate</phase>
+            <goals>
+              <goal>check</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-checkstyle-plugin</artifactId>
