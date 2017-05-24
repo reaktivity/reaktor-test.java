@@ -36,6 +36,7 @@ import java.util.Properties;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
+import org.agrona.CloseHelper;
 import org.agrona.concurrent.BackoffIdleStrategy;
 import org.agrona.concurrent.IdleStrategy;
 import org.agrona.concurrent.ringbuffer.RingBufferDescriptor;
@@ -118,7 +119,7 @@ public final class NukleusRule implements TestRule
         final int length = streamsBufferCapacity + RingBufferDescriptor.TRAILER_LENGTH +
                 throttleBufferCapacity + RingBufferDescriptor.TRAILER_LENGTH;
 
-        createEmptyFile(streams.getAbsoluteFile(), length);
+        CloseHelper.close(createEmptyFile(streams.getAbsoluteFile(), length));
 
         return this;
     }
