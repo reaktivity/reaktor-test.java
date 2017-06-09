@@ -47,6 +47,7 @@ import org.reaktivity.nukleus.Configuration;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.nukleus.NukleusFactory;
 
+@Deprecated
 public final class NukleusRule implements TestRule
 {
     private final String[] names;
@@ -105,7 +106,6 @@ public final class NukleusRule implements TestRule
         return this;
     }
 
-    @Deprecated
     public NukleusRule streams(
         String nukleus,
         String source)
@@ -174,7 +174,7 @@ public final class NukleusRule implements TestRule
 
                 for (int i=0; i < names.length; i++)
                 {
-                    nuklei[i] = factory.create(names[i], config);
+                    nuklei[i] = factory.create(names[i], config, null);
                 }
                 Runnable runnable = () ->
                 {
