@@ -60,37 +60,43 @@ public final class ReaktorRule implements TestRule
 
     public ReaktorRule directory(String directory)
     {
-        properties.setProperty(DIRECTORY_PROPERTY_NAME, directory);
-        return this;
+        return configure(DIRECTORY_PROPERTY_NAME, directory);
     }
 
     public ReaktorRule commandBufferCapacity(int commandBufferCapacity)
     {
-        properties.setProperty(COMMAND_BUFFER_CAPACITY_PROPERTY_NAME, valueOf(commandBufferCapacity));
-        return this;
+        return configure(COMMAND_BUFFER_CAPACITY_PROPERTY_NAME, commandBufferCapacity);
     }
 
     public ReaktorRule responseBufferCapacity(int responseBufferCapacity)
     {
-        properties.setProperty(RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME, valueOf(responseBufferCapacity));
-        return this;
+        return configure(RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME, responseBufferCapacity);
     }
 
     public ReaktorRule counterValuesBufferCapacity(int counterValuesBufferCapacity)
     {
-        properties.setProperty(COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME, valueOf(counterValuesBufferCapacity));
-        return this;
+        return configure(COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME, counterValuesBufferCapacity);
     }
 
     public ReaktorRule streamsBufferCapacity(int streamsBufferCapacity)
     {
-        properties.setProperty(STREAMS_BUFFER_CAPACITY_PROPERTY_NAME, valueOf(streamsBufferCapacity));
-        return this;
+        return configure(STREAMS_BUFFER_CAPACITY_PROPERTY_NAME, streamsBufferCapacity);
     }
 
     public ReaktorRule throttleBufferCapacity(int throttleBufferCapacity)
     {
-        properties.setProperty(THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME, valueOf(throttleBufferCapacity));
+        return configure(THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME, throttleBufferCapacity);
+    }
+
+    public ReaktorRule configure(String name, int value)
+    {
+        properties.setProperty(name, valueOf(value));
+        return this;
+    }
+
+    public ReaktorRule configure(String name, String value)
+    {
+        properties.setProperty(name, value);
         return this;
     }
 
