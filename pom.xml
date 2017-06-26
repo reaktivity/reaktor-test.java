@@ -43,7 +43,7 @@
     <checkstyle.config.location>src/conf/checkstyle/configuration.xml</checkstyle.config.location>
     <checkstyle.suppressions.location>src/conf/checkstyle/suppressions.xml</checkstyle.suppressions.location>
 
-    <reaktor.version>0.5</reaktor.version>
+    <reaktor.version>0.6</reaktor.version>
     <junit.version>4.12</junit.version>
   </properties>
 
