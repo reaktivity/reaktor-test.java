@@ -6,7 +6,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>org.reaktivity</groupId>
   <artifactId>reaktor-test</artifactId>
-  <version>0.9</version>
+  <version>0.9.1</version>
   <name>Reaktor Testing for Java Nuklei</name>
   <description>Reaktor Testing for Java Nuklei</description>
   <url>https://github.com/reaktivity/reaktor-test.java</url>
@@ -43,7 +43,7 @@
     <checkstyle.config.location>src/conf/checkstyle/configuration.xml</checkstyle.config.location>
     <checkstyle.suppressions.location>src/conf/checkstyle/suppressions.xml</checkstyle.suppressions.location>
 
-    <reaktor.version>0.8</reaktor.version>
+    <reaktor.version>0.8.3</reaktor.version>
     <junit.version>4.12</junit.version>
   </properties>
 
