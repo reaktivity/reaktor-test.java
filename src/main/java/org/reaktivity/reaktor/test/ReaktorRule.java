@@ -17,6 +17,7 @@ package org.reaktivity.reaktor.test;
 
 import static java.lang.String.valueOf;
 import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
+import static java.nio.file.Files.exists;
 import static org.junit.runners.model.MultipleFailureException.assertEmpty;
 import static org.reaktivity.nukleus.Configuration.COMMAND_BUFFER_CAPACITY_PROPERTY_NAME;
 import static org.reaktivity.nukleus.Configuration.COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME;
@@ -181,10 +182,11 @@ public final class ReaktorRule implements TestRule
             public void evaluate() throws Throwable
             {
                 Configuration config = configuration();
+                Path directory = config.directory();
 
-                if (clean)
+                if (clean && exists(directory))
                 {
-                    Files.walk(config.directory(), FOLLOW_LINKS)
+                    Files.walk(directory, FOLLOW_LINKS)
                          .filter(this::shouldDeletePath)
                          .map(Path::toFile)
                          .forEach(File::delete);
