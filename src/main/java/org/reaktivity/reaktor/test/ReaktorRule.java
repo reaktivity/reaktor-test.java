@@ -19,12 +19,12 @@ import static java.lang.String.valueOf;
 import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
 import static java.nio.file.Files.exists;
 import static org.junit.runners.model.MultipleFailureException.assertEmpty;
-import static org.reaktivity.nukleus.Configuration.COMMAND_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.nukleus.Configuration.COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.nukleus.Configuration.DIRECTORY_PROPERTY_NAME;
-import static org.reaktivity.nukleus.Configuration.RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.nukleus.Configuration.STREAMS_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.nukleus.Configuration.THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.COMMAND_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.DIRECTORY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.STREAMS_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.internal.ReaktorConfiguration.THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME;
 
 import java.io.File;
 import java.nio.file.Files;
@@ -37,11 +37,11 @@ import java.util.function.Predicate;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
-import org.reaktivity.nukleus.Configuration;
 import org.reaktivity.nukleus.Controller;
 import org.reaktivity.nukleus.Nukleus;
 import org.reaktivity.reaktor.Reaktor;
 import org.reaktivity.reaktor.ReaktorBuilder;
+import org.reaktivity.reaktor.internal.ReaktorConfiguration;
 
 public final class ReaktorRule implements TestRule
 {
@@ -50,7 +50,7 @@ public final class ReaktorRule implements TestRule
 
     private Reaktor reaktor;
 
-    private Configuration configuration;
+    private ReaktorConfiguration configuration;
     private boolean clean;
 
     public ReaktorRule()
@@ -156,11 +156,11 @@ public final class ReaktorRule implements TestRule
         return controller;
     }
 
-    private Configuration configuration()
+    private ReaktorConfiguration configuration()
     {
         if (configuration == null)
         {
-            configuration = new Configuration(properties);
+            configuration = new ReaktorConfiguration(properties);
         }
         return configuration;
     }
@@ -181,7 +181,7 @@ public final class ReaktorRule implements TestRule
             @Override
             public void evaluate() throws Throwable
             {
-                Configuration config = configuration();
+                ReaktorConfiguration config = configuration();
                 Path directory = config.directory();
 
                 if (clean && exists(directory))
