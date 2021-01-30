@@ -13,20 +13,19 @@
  * License for the specific language governing permissions and limitations
  * under the License.
  */
-package org.reaktivity.reaktor.test;
+package org.reaktivity.reaktor.test.annotation;
 
-import org.junit.Rule;
-import org.junit.Test;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Repeatable;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class ReaktorRuleTest
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ ElementType.METHOD })
+@Repeatable(Configures.class)
+public @interface Configure
 {
-    @Rule
-    public final ReaktorRule reaktor = new ReaktorRule()
-        .directory("target/reaktor-itests")
-        .clean();
-
-    @Test
-    public void shouldNotFailToCleanMissingDirectory() throws Exception
-    {
-    }
+    String name();
+    String value();
 }

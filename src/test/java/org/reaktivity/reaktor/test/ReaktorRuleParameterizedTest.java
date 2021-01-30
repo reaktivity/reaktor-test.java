@@ -15,15 +15,33 @@
  */
 package org.reaktivity.reaktor.test;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.junit.Rule;
 import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-public class ReaktorRuleTest
+@RunWith(Parameterized.class)
+public class ReaktorRuleParameterizedTest
 {
+
+    @Parameterized.Parameters
+    public static Collection<Object[]> data()
+    {
+        return Arrays.asList(new Object[][] {{1}, {2}, {3}, {4}});
+    }
+
+    public ReaktorRuleParameterizedTest(int value)
+    {
+        reaktor = new ReaktorRule()
+            .directory("target/reaktor-itests")
+            .clean();
+    }
+
     @Rule
-    public final ReaktorRule reaktor = new ReaktorRule()
-        .directory("target/reaktor-itests")
-        .clean();
+    public final ReaktorRule reaktor;
 
     @Test
     public void shouldNotFailToCleanMissingDirectory() throws Exception

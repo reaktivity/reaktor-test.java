@@ -1,5 +1,5 @@
 /**
- * Copyright 2016-2017 The Reaktivity Project
+ * Copyright 2016-2021 The Reaktivity Project
  *
  * The Reaktivity Project licenses this file to you under the Apache License,
  * version 2.0 (the "License"); you may not use this file except in compliance
@@ -15,36 +15,54 @@
  */
 package org.reaktivity.reaktor.test;
 
-import static java.lang.String.valueOf;
+import static java.lang.String.format;
 import static java.nio.file.FileVisitOption.FOLLOW_LINKS;
 import static java.nio.file.Files.exists;
+import static java.util.Objects.requireNonNull;
 import static org.junit.runners.model.MultipleFailureException.assertEmpty;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.COMMAND_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.DIRECTORY_PROPERTY_NAME;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.STREAMS_BUFFER_CAPACITY_PROPERTY_NAME;
-import static org.reaktivity.reaktor.internal.ReaktorConfiguration.THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_COMMAND_BUFFER_CAPACITY;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_COUNTERS_BUFFER_CAPACITY;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_DIRECTORY;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_DRAIN_ON_CLOSE;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_RESPONSE_BUFFER_CAPACITY;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_ROUTED_DELAY_MILLIS;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_STREAMS_BUFFER_CAPACITY;
+import static org.reaktivity.reaktor.ReaktorConfiguration.REAKTOR_SYNTHETIC_ABORT;
 
 import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.function.Predicate;
+import java.util.regex.Pattern;
 
+import org.agrona.ErrorHandler;
+import org.agrona.LangUtil;
 import org.junit.rules.TestRule;
 import org.junit.runner.Description;
 import org.junit.runners.model.Statement;
+import org.reaktivity.nukleus.Configuration.PropertyDef;
 import org.reaktivity.nukleus.Controller;
 import org.reaktivity.nukleus.Nukleus;
+import org.reaktivity.nukleus.NukleusFactorySpi;
 import org.reaktivity.reaktor.Reaktor;
 import org.reaktivity.reaktor.ReaktorBuilder;
-import org.reaktivity.reaktor.internal.ReaktorConfiguration;
+import org.reaktivity.reaktor.ReaktorConfiguration;
+import org.reaktivity.reaktor.test.annotation.Configure;
 
 public final class ReaktorRule implements TestRule
 {
+    public static final long EXTERNAL_AFFINITY_MASK = 1L << (Long.SIZE - 1);
+
+    // needed by test annotations
+    public static final String REAKTOR_BUFFER_POOL_CAPACITY_NAME = "reaktor.buffer.pool.capacity";
+    public static final String REAKTOR_BUFFER_SLOT_CAPACITY_NAME = "reaktor.buffer.slot.capacity";
+
+    private static final Pattern DATA_FILENAME_PATTERN = Pattern.compile("data\\d+");
+
     private final Properties properties;
     private final ReaktorBuilder builder;
 
@@ -57,45 +75,48 @@ public final class ReaktorRule implements TestRule
     {
         this.builder = Reaktor.builder();
         this.properties = new Properties();
+
+        configure(REAKTOR_DRAIN_ON_CLOSE, true);
+        configure(REAKTOR_SYNTHETIC_ABORT, true);
+        configure(REAKTOR_ROUTED_DELAY_MILLIS, 500L);
     }
 
     public ReaktorRule directory(String directory)
     {
-        return configure(DIRECTORY_PROPERTY_NAME, directory);
+        return configure(REAKTOR_DIRECTORY, directory);
     }
 
     public ReaktorRule commandBufferCapacity(int commandBufferCapacity)
     {
-        return configure(COMMAND_BUFFER_CAPACITY_PROPERTY_NAME, commandBufferCapacity);
+        return configure(REAKTOR_COMMAND_BUFFER_CAPACITY, commandBufferCapacity);
     }
 
     public ReaktorRule responseBufferCapacity(int responseBufferCapacity)
     {
-        return configure(RESPONSE_BUFFER_CAPACITY_PROPERTY_NAME, responseBufferCapacity);
+        return configure(REAKTOR_RESPONSE_BUFFER_CAPACITY, responseBufferCapacity);
     }
 
     public ReaktorRule counterValuesBufferCapacity(int counterValuesBufferCapacity)
     {
-        return configure(COUNTERS_BUFFER_CAPACITY_PROPERTY_NAME, counterValuesBufferCapacity);
+        return configure(REAKTOR_COUNTERS_BUFFER_CAPACITY, counterValuesBufferCapacity);
     }
 
     public ReaktorRule streamsBufferCapacity(int streamsBufferCapacity)
     {
-        return configure(STREAMS_BUFFER_CAPACITY_PROPERTY_NAME, streamsBufferCapacity);
+        return configure(REAKTOR_STREAMS_BUFFER_CAPACITY, streamsBufferCapacity);
     }
 
-    public ReaktorRule throttleBufferCapacity(int throttleBufferCapacity)
+    public <T> ReaktorRule configure(
+        PropertyDef<T> property,
+        T value)
     {
-        return configure(THROTTLE_BUFFER_CAPACITY_PROPERTY_NAME, throttleBufferCapacity);
-    }
-
-    public ReaktorRule configure(String name, int value)
-    {
-        properties.setProperty(name, valueOf(value));
+        properties.setProperty(property.name(), value.toString());
         return this;
     }
 
-    public ReaktorRule configure(String name, String value)
+    public ReaktorRule configure(
+        String name,
+        String value)
     {
         properties.setProperty(name, value);
         return this;
@@ -114,46 +135,141 @@ public final class ReaktorRule implements TestRule
         return this;
     }
 
+    public ReaktorRule loader(
+        ClassLoader loader)
+    {
+        builder.loader(loader);
+        return this;
+    }
+
     public ReaktorRule controller(
-        Predicate<Class<? extends Controller>> matcher)
+        Predicate<String> matcher)
     {
         builder.controller(matcher);
         return this;
     }
 
-    public <T extends Nukleus> T nukleus(
-        String name,
-        Class<T> kind)
+    public ReaktorRule affinityMask(
+        String address,
+        long affinityMask)
     {
-        if (reaktor == null)
-        {
-            throw new IllegalStateException("Reaktor not started");
-        }
+        builder.affinityMask(address, affinityMask);
+        return this;
+    }
 
-        T nukleus = reaktor.nukleus(name, kind);
-        if (nukleus == null)
-        {
-            throw new IllegalStateException("nukleus not found: " + name + " " + kind.getName());
-        }
-
-        return nukleus;
+    public ReaktorRule nukleusFactory(
+        Class<? extends NukleusFactorySpi> factory)
+    {
+        loader(Services.newLoader(NukleusFactorySpi.class, factory));
+        return this;
     }
 
     public <T extends Controller> T controller(
         Class<T> kind)
     {
-        if (reaktor == null)
-        {
-            throw new IllegalStateException("Reaktor not started");
-        }
+        ensureReaktorStarted();
 
-        T controller = reaktor.controller(kind);
-        if (controller == null)
-        {
-            throw new IllegalStateException("controller not found: " + kind.getName());
-        }
+        return requireNonNull(reaktor.controller(kind));
+    }
 
-        return controller;
+    public <T extends Nukleus> T nukleus(
+        Class<T> kind)
+    {
+        ensureReaktorStarted();
+
+        return requireNonNull(reaktor.nukleus(kind));
+    }
+
+    public long opensRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.opens.read", nukleus, routeId));
+    }
+
+    public long opensWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.opens.written", nukleus, routeId));
+    }
+
+    public long closesRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.closes.read", nukleus, routeId));
+    }
+
+    public long closesWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.closes.written", nukleus, routeId));
+    }
+
+    public long abortsRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.aborts.read", nukleus, routeId));
+    }
+
+    public long abortsWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.aborts.written", nukleus, routeId));
+    }
+
+    public long resetsRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.resets.read", nukleus, routeId));
+    }
+
+    public long resetsWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.resets.written", nukleus, routeId));
+    }
+
+    public long bytesRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.bytes.read", nukleus, routeId));
+    }
+
+    public long bytesWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.bytes.written", nukleus, routeId));
+    }
+
+    public long framesRead(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.frames.read", nukleus, routeId));
+    }
+
+    public long framesWritten(
+        String nukleus,
+        long routeId)
+    {
+        return counter(format("%s.%d.frames.written", nukleus, routeId));
+    }
+
+    public long counter(
+        String name)
+    {
+        ensureReaktorStarted();
+
+        return reaktor.counter(name);
     }
 
     private ReaktorConfiguration configuration()
@@ -165,17 +281,42 @@ public final class ReaktorRule implements TestRule
         return configuration;
     }
 
+    private void ensureReaktorStarted()
+    {
+        if (reaktor == null)
+        {
+            throw new IllegalStateException("Reaktor not started");
+        }
+    }
+
     @Override
     public Statement apply(Statement base, Description description)
     {
+        final String testMethod = description.getMethodName().replaceAll("\\[.*\\]", "");
+        try
+        {
+            Configure[] configures = description.getTestClass()
+                       .getDeclaredMethod(testMethod)
+                       .getAnnotationsByType(Configure.class);
+            Arrays.stream(configures).forEach(
+                p -> properties.setProperty(p.name(), p.value()));
+        }
+        catch (Exception e)
+        {
+            LangUtil.rethrowUnchecked(e);
+        }
+
         return new Statement()
         {
             private boolean shouldDeletePath(
                 Path path)
             {
-                final int count = path.getNameCount();
-                return "control".equals(path.getName(count - 1).toString()) ||
-                        (count >= 2 && "streams".equals(path.getName(count - 2).toString()));
+                String filename = path.getFileName().toString();
+                return "control".equals(filename) ||
+                       "routes".equals(filename) ||
+                       "streams".equals(filename) ||
+                       "labels".equals(filename) ||
+                       DATA_FILENAME_PATTERN.matcher(filename).matches();
             }
 
             @Override
@@ -183,6 +324,7 @@ public final class ReaktorRule implements TestRule
             {
                 ReaktorConfiguration config = configuration();
                 Path directory = config.directory();
+                Path cacheDirectory = config.cacheDirectory();
 
                 if (clean && exists(directory))
                 {
@@ -192,10 +334,22 @@ public final class ReaktorRule implements TestRule
                          .forEach(File::delete);
                 }
 
-                final List<Throwable> errors = new ArrayList<>();
+                if (clean && exists(cacheDirectory))
+                {
+                    Files.walk(cacheDirectory)
+                         .map(Path::toFile)
+                         .forEach(File::delete);
+                }
 
+                final Thread baseThread = Thread.currentThread();
+                final List<Throwable> errors = new ArrayList<>();
+                final ErrorHandler errorHandler = ex ->
+                {
+                    errors.add(ex);
+                    baseThread.interrupt();
+                };
                 reaktor = builder.config(config)
-                                 .errorHandler(errors::add)
+                                 .errorHandler(errorHandler)
                                  .build();
 
                 try
